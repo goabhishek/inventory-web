@@ -3,6 +3,7 @@ const User = require('../models/userModel');
 User;
 const jwt = require('jsonwebtoken');
 const { response } = require('express');
+const bcrypt = require('bcryptjs');
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '1d' });
@@ -55,7 +56,7 @@ const registerUser = asyncHandler(async (req, res) => {
   });
 
   if (user) {
-    const { _id, name, email, photo, phone, bio } = user;
+    const { _id, name, email, photo, phone, bio, token } = user;
     res.status(201).json({
       _id,
       name,
@@ -95,9 +96,62 @@ const loginUser = asyncHandler(async (req, res) => {
   }
 
   // user exists , check if passwoed is correct
+  const passwordIsCorrect = await bcrypt.compare(password, user.password);
+
+  //genearet Token
+
+  const token = generateToken(user._id);
+
+  // send HTTP-only cookie
+
+  res.cookie('token', token, {
+    path: '/',
+    httpOnly: true,
+    expires: new Date(Date.now() + 1000 * 86400), //1day
+    sameSite: 'none',
+    secure: true,
+  });
+
+  if (user && passwordIsCorrect) {
+    const { _id, name, email, photo, phone, bio } = user;
+    res.status(200).json({
+      _id,
+      name,
+      email,
+      photo,
+      phone,
+      bio,
+      token,
+    });
+  } else {
+    res.status(400);
+    throw new Error('Invalid email or password');
+  }
+});
+
+//Logout User
+
+const logout = asyncHandler(async (req, res) => {
+  res.cookie('token', '', {
+    path: '/',
+    httpOnly: true,
+    expires: new Date(0),
+    sameSite: 'none',
+    secure: true,
+  });
+
+  return res.status(200).json({ message: 'Successfully Logget Out' });
+});
+
+// get user Data
+
+const getUser = asyncHandler(async (req, res) => {
+  res.send('Get user data');
 });
 
 module.exports = {
   registerUser,
   loginUser,
+  logout,
+  getUser,
 };
