@@ -4,6 +4,9 @@ User;
 const jwt = require('jsonwebtoken');
 const { response } = require('express');
 const bcrypt = require('bcryptjs');
+const Token = require('../models/tokenModel');
+const crypto = require('crypto');
+const sendEmail = require('../utils/sendEmail');
 
 // Generate token
 const generateToken = (id) => {
@@ -239,7 +242,52 @@ const ChagePassword = asyncHandler(async (req, res) => {
 });
 
 const forgotPassword = asyncHandler(async (req, res) => {
-  res.send('forgot password');
+  const { email } = req.body;
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    res.status(404);
+    throw new Error('User doe not exist');
+  }
+
+  //Create reset token
+  let resetToken = crypto.randomBytes(32).toString('hex') + user._id;
+
+  // Hash token before saving to DB
+  const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+  //Save Token to DB
+  await new Token({
+    userId: user._Id,
+    createdAt: Date.now(),
+    token: hashedToken,
+
+    expiresAt: Date.now() + 30 * (60 * 1000), //Thirty minutes
+  }).save();
+
+  // Construct Reset URL
+  const resetUrl = `${process.env.FRONTEND_URL}/resetpassword/${resetToken}`;
+  //Reset Email
+  const message = `
+ 	<h2>Hello ${user.name}</h2>
+	<p> Please ue the url below to reset your password</p>
+	<p>This reset link is valid for only 30 minutes.</p> 
+	<a href=${resetUrl} clicktracking=off>${resetUrl}</a>
+
+	<p>Regards...</p>
+	<p>Prowfit team</p>
+  `;
+  const subject = 'Password Reset Request';
+  const send_to = user.email;
+  const sent_from = process.env.EMAIL_USER;
+
+  try {
+    await sendEmail(subject, message, send_to, sent_from);
+    res.status(200).json({ success: true, message: 'Reset Email Sent' });
+  } catch (error) {
+    res.status(500);
+    throw new Error('Email not sent ,please try again');
+  }
 });
 
 module.exports = {
