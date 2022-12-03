@@ -247,7 +247,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
   if (!user) {
     res.status(404);
-    throw new Error('User doe not exist');
+    throw new Error('User does not exist');
   }
 
   //Create reset token
@@ -258,7 +258,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
   //Save Token to DB
   await new Token({
-    userId: user._Id,
+    userId: user._id,
     createdAt: Date.now(),
     token: hashedToken,
 
