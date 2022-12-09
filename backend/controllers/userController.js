@@ -259,9 +259,8 @@ const forgotPassword = asyncHandler(async (req, res) => {
   //Save Token to DB
   await new Token({
     userId: user._id,
-    createdAt: Date.now(),
     token: hashedToken,
-
+    createdAt: Date.now(),
     expiresAt: Date.now() + 30 * (60 * 1000), //Thirty minutes
   }).save();
 
@@ -290,6 +289,12 @@ const forgotPassword = asyncHandler(async (req, res) => {
   }
 });
 
+// Reset Password
+const resetPassword = asyncHandler(async (req, res) => {
+  const { password } = req.body;
+  const { resetToken } = req.params;
+});
+
 module.exports = {
   registerUser,
   loginUser,
@@ -299,4 +304,5 @@ module.exports = {
   updateUser,
   ChagePassword,
   forgotPassword,
+  resetPassword,
 };
